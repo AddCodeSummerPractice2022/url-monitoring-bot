@@ -3,6 +3,7 @@ from aiogram.utils import executor
 from createBot import dp
 
 
+
 async def on_startup():
     print('Бот вошел в чатик')
 
