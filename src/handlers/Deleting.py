@@ -17,10 +17,10 @@ async def delete_start(message : types.Message):
     if sqlite_db.sql_get_amount(message.from_user.id) != 0:
         await FSMDelete.number.set()
         #await message.reply("Вывожу ваш список сайтов на мониторинг")
-        For_Spisok = sqlite_db.sql_get_spisok(str(message.from_user.id))
+        list_of_sites = sqlite_db.sql_get_list_of_sites(str(message.from_user.id))
         await message.answer("Вывожу Ваш список сайтов на мониторинг")
-        for i in range(len(For_Spisok)):
-            await message.answer(str("   " + str(i + 1) + ". " + str(For_Spisok[i])))
+        for i in range(len(list_of_sites)):
+            await message.answer(str("   " + str(i + 1) + ". " + str(list_of_sites[i])))
         await message.answer("Введите номер сайта из списка, который хотите удалить")
     else:
         await message.answer("Вы еще не добавили ни одного сайта в список")
@@ -29,7 +29,7 @@ async def delete_start(message : types.Message):
 
 # Выход из состояний
 async def cancel_handler(message: types.Message, state: FSMContext):
-    if message.text.strip() == "отмена" or "Отмена":
+    if message.text.lower() == "отмена":
         current_state = await state.get_state()
         if current_state is None:
             await message.answer('Вам нечего отменять =)')
@@ -46,8 +46,6 @@ async def load_number(message : types.Message, state : FSMContext):
             for_amount = sqlite_db.sql_read_user(message.from_user.id)
             amount = len(for_amount)
             if check <= amount:
-                async with state.proxy() as data:
-                    data['number'] = message.text
                 await message.reply("Вы выбрали: " + str(message.text))
                 number.number = int(message.text)
                 await message.answer("Вы уверены, что хотите удалить данный сайт из списка мониторинга? (ДА/НЕТ)")
@@ -60,13 +58,13 @@ async def load_number(message : types.Message, state : FSMContext):
         await message.answer ('Неправильно введен номер, повторите попытку')
 
 async def load_answer(message : types.Message, state : FSMContext):
-    if (message.text.strip() == "ДА"): 
+    if (message.text.lower() == "да"): 
         async with state.proxy() as data:
             data['answer'] = message.text
         await message.answer("Удаление завершено!")
         sqlite_db.sql_remove_site(message.from_user.id, number.number)
         await state.finish()
-    elif (message.text.strip() == "НЕТ"):
+    elif (message.text.lower() == "нет"):
         async with state.proxy() as data:
             data['number'] = message.text
         await message.reply("Хорошо, отменяю удаление")
@@ -77,6 +75,6 @@ async def load_answer(message : types.Message, state : FSMContext):
 def register_handlers_Deleting(dp:Dispatcher):
     dp.register_message_handler(delete_start, commands=['Удалить'], state=None)
     dp.register_message_handler(cancel_handler, state="*", commands='отмена')
-    dp.register_message_handler(cancel_handler, Text(equals='отмена' or 'Отмена', ignore_case=True), state="*")
+    dp.register_message_handler(cancel_handler, Text(equals='отмена', ignore_case=True), state="*")
     dp.register_message_handler(load_number, state=FSMDelete.number)
     dp.register_message_handler(load_answer, state=FSMDelete.answer)

@@ -1,3 +1,1 @@
-from handlers import client
-from handlers import addSite
-from handlers import others
+from handlers import client, others, addSite

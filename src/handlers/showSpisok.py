@@ -4,7 +4,6 @@ from aiogram import types, Dispatcher
 from createBot import dp
 from aiogram.dispatcher.filters import Text
 from data_base import sqlite_db
-#from handlers.update import FSMUpdate
 import urllib
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
@@ -39,22 +38,22 @@ class sites_db():
     ping = str()
     check_date = str()
 
-async def show_spisok(message: types.Message):
+async def show_list(message: types.Message):
     
     if sqlite_db.sql_get_amount(message.from_user.id) != 0:
         await FSMUpdate.number.set()
         get_spisok_bd.tg_user_id = str(message.from_user.id)
-        spisok = sqlite_db.sql_get_spisok(str(message.from_user.id))
+        list_of_sites = sqlite_db.sql_get_list_of_sites(str(message.from_user.id))
         await message.answer("Вывожу Ваш список сайтов на мониторинг")
-        for i in range(len(spisok)):
-            await message.answer(str("   " + str(i+1) + ". " + str(spisok[i])))
+        for i in range(len(list_of_sites)):
+            await message.answer(str("   " + str(i+1) + ". " + str(list_of_sites[i])))
         await message.answer("Вы можете ввести номер сайта, чтобы обновить его данные.")
     else:
         await message.answer("Вы еще не добавили ни одного сайта в список")
 
 # Выход из состояний
 async def cancel_handler(message: types.Message, state: FSMContext):
-    if message.text.strip() == "отмена" or "Отмена":
+    if message.text.lower() == "отмена":
         current_state = await state.get_state()
         if current_state is None:
             await message.answer('Вам нечего отменять =)')
@@ -70,11 +69,11 @@ async def load_number(message : types.Message, state : FSMContext):
             for_amount = list(sqlite_db.sql_read_user(message.from_user.id))
             amount = len(for_amount)
             if check <= amount:
-                spisok = sqlite_db.sql_get_url(str(message.from_user.id))
+                list_of_urls = sqlite_db.sql_get_url(str(message.from_user.id))
                 uid = sqlite_db.sql_get_uid(str(message.from_user.id))
                 i = int(message.text)
-                url = str(spisok[i-1]) 
-                url1 = str(spisok[i-1])
+                url = str(list_of_urls[i-1]) 
+                url1 = str(list_of_urls[i-1])
                 url = re.sub(r'[,\'\"\(\)]', '', url)
                 url1 = re.sub(r'[,\'\"\(\)]', '', url1)
                 url1 = str("http://" + url1)
@@ -95,20 +94,18 @@ async def load_number(message : types.Message, state : FSMContext):
                     sites_db.status = "Offline"
                     sites_db.ping = "None"
                     sites_db.check_date = datetime.now()
-                    await sqlite_db.sql_update_site(sites_db.id, sites_db.status, sites_db.ping, sites_db.check_date)
-                    await sqlite_db.sql_add_sitelog(sites_db.id, sites_db.status, sites_db.ping, sites_db.check_date)
+                    await sqlite_db.sql_update_site(uid)
+                    await sqlite_db.sql_add_sitelog()
                     await state.finish()
                 else:
                     await message.reply("Сайт работает!")
-                    ping_only = ping(url , size=1, count=1)
-                    ping_only = str(ping_only.rtt_avg_ms) + " ms"
-                    sites_db.ping = ping_only
-                    await message.answer("Время отклика: " + ping_only)
+                    sites_db.ping = str(ping(url, size=1, count=1).rtt_avg_ms) + " ms"
+                    await message.answer("Время отклика: " + sites_db.ping)
                     sites_db.site_url = url
                     sites_db.status = "Online"
                     sites_db.check_date = datetime.now()
-                    await sqlite_db.sql_update_site(sites_db.id, sites_db.status, sites_db.ping, sites_db.check_date)
-                    await sqlite_db.sql_add_sitelog(sites_db.id, sites_db.status, sites_db.ping, sites_db.check_date)
+                    await sqlite_db.sql_update_site(uid)
+                    await sqlite_db.sql_add_sitelog()
                     await state.finish()
             else:
                 await message.answer("Введенный номер превышает количество сайтов в списке")
@@ -120,7 +117,7 @@ async def load_number(message : types.Message, state : FSMContext):
     
     
 def register_handlers_showSpisok(dp : Dispatcher):
-    dp.register_message_handler(show_spisok, commands=['Список'])
+    dp.register_message_handler(show_list, commands=['Список'])
     dp.register_message_handler(cancel_handler, state="*", commands='отмена')
-    dp.register_message_handler(cancel_handler, Text(equals='отмена' or 'Отмена', ignore_case=True), state="*")
+    dp.register_message_handler(cancel_handler, Text(equals='отмена', ignore_case=True), state="*")
     dp.register_message_handler(load_number, state=FSMUpdate.number)
