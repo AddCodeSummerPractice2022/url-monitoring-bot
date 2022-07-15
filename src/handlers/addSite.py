@@ -4,8 +4,7 @@ from aiogram import types, Dispatcher
 from createBot import dp
 from aiogram.dispatcher.filters import Text
 from data_base import sqlite_db
-#from keyboards import admin_kb
-from datetime import datetime
+from datetime import datetime, timedelta
 from pythonping import ping
 
 import uuid
@@ -106,9 +105,16 @@ async def load_answer(message: types.Message, state: FSMContext):
 
             sites_db.id = str(uuid.uuid4())
             sites_db.check_date = datetime.now()
+            #print(datetime.today())
+            #f = datetime.strptime(sqlite_db.sql_get_last_date(sites_db.id), "%Y-%m-%d %H:%M:%S.%f")
+            #print(sqlite_db.sql_get_last_date(sites_db.id))
+            #print(datetime.strptime(sqlite_db.sql_get_last_date(sites_db.id), "%Y-%m-%d %H:%M:%S.%f"))
+            #print(datetime.today() - f)
+            #print(str(datetime.today() - sqlite_db.sql_get_last_date(sites_db.id)))
 
             await sqlite_db.sql_add_user()
             await sqlite_db.sql_add_site()
+            #await sqlite_db.sql_add_sitelog()
             await sqlite_db.sql_add_conns()
             await state.finish()
             await message.answer("Сайт добавлен в список мониторинга")
@@ -117,6 +123,9 @@ async def load_answer(message: types.Message, state: FSMContext):
             await message.answer("Чтобы добавить этот сайт, нужно убрать один из списка")
             await state.finish()
     elif (message.text.strip() == "НЕТ"):
+        #sites_db.id = str(uuid.uuid4())
+        #sites_db.check_date = datetime.now()
+        #await sqlite_db.sql_add_sitelog()
         await message.reply("Хорошо, не добавляю сайт в список мониторинга")
         await state.finish()
     else:
